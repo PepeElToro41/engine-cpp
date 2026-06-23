@@ -14,7 +14,7 @@ struct World {
 	BaseAllocator* allocator;
     Archetype* root_archetype = nullptr;
 	Id next_component_id = 0;
-
+	
     EntityIndex entity_index;
     SparseList<Archetype> archetypes;
     SparseList<ComponentRecord> component_records;
@@ -27,12 +27,13 @@ struct World {
 	
 	explicit World(BaseAllocator* allocator) : 
 		allocator(allocator),
-		component_type_index(allocator),
-		type_components_lookup(allocator),
 	
 		entity_index(allocator),
 		archetypes(allocator),
 		component_records(allocator),
+	
+		type_components_lookup(allocator),
+		component_type_index(allocator),
 	
 		archetype_index(allocator),	
 		component_index(allocator)
@@ -59,8 +60,8 @@ struct World {
 		return component;
 	}
 	
-	inline Id id_from_type(usz type_hash) const {
-		const auto id = this->type_components_lookup.get(typeid(T).hash_code());
+	inline Id id_from_type(const usz type_hash) const {
+		const auto id = this->type_components_lookup.get(type_hash);
 		if (!id.has_value()) {
 			LOG_ERROR("[ECS]: Attempted to use a non registered component")
 			return 0;

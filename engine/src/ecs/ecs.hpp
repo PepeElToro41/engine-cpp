@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <bitset>
+
 #include "ecs/ecs_types.hpp"
 #include "defines.hpp"
 
@@ -15,8 +17,8 @@ namespace ECS {
 	constexpr u64 GENERATION_BITS = 32;
 	constexpr u64 GENERATION_SIZE = 1ull << GENERATION_BITS;
 	
-	constexpr u64 PAIR_FLAG = 1 << 63;
-	constexpr Id  MAX_COMPONENT_ID = 1024;
+	constexpr u64 PAIR_FLAG = 1ull << 63;
+	constexpr Id MAX_COMPONENT_ID = 1024;
 	
 	constexpr Id NAME				= MAX_COMPONENT_ID + 1;
 	constexpr Id COMPONENT			= MAX_COMPONENT_ID + 2;

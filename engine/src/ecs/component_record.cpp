@@ -22,9 +22,9 @@ static TypeInfo* get_type_info(const World* world, const Id id, const Id target)
 	}
 	if (!is_component) return nullptr;
 	
-	const auto info = world->component_type_index.get_ref(type_source);
-	if (info.has_value()) {
-		return info.value();
+	TypeInfo* info = world->component_type_index.get_ref(type_source);
+	if (info != nullptr) {
+		return info;
 	}
 	LOG_ERROR("[ECS]: Component does not have a type info linked to it")
 	return nullptr;
@@ -44,7 +44,7 @@ ComponentRecord* ComponentRecord::component_record_create(World* world, const Id
 	new_record->archetype_count = 0;
 	new_record->id = id;
 	
-	bool is_pair = ECS::IS_PAIR(id);
+	const bool is_pair = ECS::IS_PAIR(id);
 	bool is_exclusive = false;
 	bool has_delete = false;
 	bool is_traversable = false;
@@ -116,10 +116,6 @@ ComponentRecord* ComponentRecord::component_record_ensure(World* world, const Id
 } 
 
 ComponentRecord* ComponentRecord::component_record_get(const World* world, const Id id) {
-	const auto record = world->component_index.get(id);
-	if (record.has_value()) {
-		return record.value();
-	}
-	return nullptr;
+	return world->component_index.get(id).value();
 }
 

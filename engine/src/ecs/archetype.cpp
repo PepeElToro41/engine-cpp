@@ -8,16 +8,15 @@
 #include "ecs/world.hpp"
 #include "ecs/entity_index.hpp"
 #include "ecs/component_record.hpp"
-#include "ecs/ecs.hpp"
 
-constexpr usz ARCHETYPE_PREALLOCATED_SIZE = 16;
+#include <assert.h>
 
 ArchetypeType ArchetypeType::clone(BaseAllocator* allocator, const usz reserve) const {
     const usz count = this->id_count + reserve;
-    const ArchetypeType new_type = {
-        .id_count = count,
-        .ids = MEMORY::alloc<Id>(allocator, count),
-    };
+    const ArchetypeType new_type(
+        MEMORY::alloc<Id>(allocator, count),
+        count
+    );
     
     return new_type;
 }
@@ -67,7 +66,7 @@ void Archetype::ensure_capacity(const usz capacity) {
 
     usz new_capacity = this->data.entity_capacity > 0
         ? this->data.entity_capacity * 2
-        : ARCHETYPE_PREALLOCATED_SIZE;
+        : ARCHETYPE::PREALLOCATED_SIZE;
 
     while (new_capacity < capacity) {
         new_capacity *= 2;
@@ -181,29 +180,40 @@ void Archetype::move_entity(const World* world, Archetype* destination, EntityId
     }
 }
 
-Archetype* Archetype::create_archetype(World* world, ArchetypeType archetype_type) {
+static bool append_to_pair(ComponentRecord* record, const ArchetypeId archetype_id, const usz index) {
+	if (!record->columns_index.contains(archetype_id)) {
+		record->columns_index.set(archetype_id, index);
+		record->pair_record->pairs_count.set(archetype_id, 1);
+		return true;
+	} else {
+		u32* count_ref = record->pair_record->pairs_count.get_ref(archetype_id);
+		(*count_ref)++;
+		return false;
+	}
+}
+
+Archetype* Archetype::create_archetype(World* world, const ArchetypeType archetype_type) {
 	Archetype* new_archetype = world->archetypes.new_element();
-	new_archetype->archetype_id = world->archetypes.get_latest_alive();
+	const ArchetypeId archetype_id = world->archetypes.get_latest_alive();
+	new_archetype->archetype_id = archetype_id;
 	new_archetype->archetype_type = archetype_type.clone(world->allocator);
 	new_archetype->allocator = world->allocator;
 	
 	const usz columns_count = archetype_type.id_count;
 	
 	if (columns_count > 0) {	
-		EntityId* archetype_entities = MEMORY::alloc<EntityId>(world->allocator, ARCHETYPE_PREALLOCATED_SIZE, false);
+		EntityId* archetype_entities = MEMORY::alloc<EntityId>(world->allocator, ARCHETYPE::PREALLOCATED_SIZE, false);
 		ArchetypeColumn* archetype_columns = MEMORY::alloc<ArchetypeColumn>(world->allocator, columns_count);
 		
 		for (usz i = 0; i < columns_count; i++) {
 			const Id id = archetype_type.ids[i];
 			ComponentRecord* record = ComponentRecord::component_record_ensure(world, id);
 			++record->archetype_count;
-			
-			new_archetype->columns_index.set(id, i);
-			
+		
 			if (record->flags & ComponentRecordFlags::IS_COMPONENT) {
 				TypeInfo* type_info = record->type_info;
 				
-				void* column_data = MEMORY::malloc(world->allocator, type_info->length * ARCHETYPE_PREALLOCATED_SIZE, type_info->alignment, false);
+				void* column_data = MEMORY::malloc(world->allocator, type_info->length * ARCHETYPE::PREALLOCATED_SIZE, type_info->alignment, false);
 				archetype_columns[i] = {
 					.data =	column_data,
 					.type_info = type_info
@@ -216,6 +226,36 @@ Archetype* Archetype::create_archetype(World* world, ArchetypeType archetype_typ
 				};
 				new_archetype->columns_map.set(id, nullptr);
 			}
+			
+			new_archetype->columns_index.set(id, i);
+			record->columns_index.set(archetype_id, i);
+			
+			if (ECS::IS_PAIR(id)) {
+				Id relation_wildcard = ECS::PAIR(ECS::PAIR_FIRST(id), ECS::WILDCARD);
+				Id target_wildcard = ECS::PAIR(ECS::WILDCARD, ECS::PAIR_SECOND(id));
+				
+				auto can_relation_record =  world->component_index.get(relation_wildcard);
+				assert(can_relation_record.has_value());
+				ComponentRecord* relation_record = can_relation_record.value();
+				++relation_record->archetype_count;
+				
+				const bool relation_appended = append_to_pair(relation_record, archetype_id, i);
+				if (relation_appended) {
+					new_archetype->columns_map.set(relation_wildcard, &archetype_columns[i]);
+					new_archetype->columns_index.set(relation_wildcard, i);
+				}
+				
+				auto can_target_record =  world->component_index.get(target_wildcard);
+				assert(can_target_record.has_value());
+				ComponentRecord* target_record = can_target_record.value();
+				++target_record->archetype_count;		
+			
+				const bool target_appended = append_to_pair(target_record, archetype_id, i);
+				if (target_appended) {
+					new_archetype->columns_map.set(target_wildcard, &archetype_columns[i]);
+					new_archetype->columns_index.set(target_wildcard, i);
+				}
+			}
 		}
 		
 		new_archetype->data.entities = archetype_entities;
@@ -223,7 +263,7 @@ Archetype* Archetype::create_archetype(World* world, ArchetypeType archetype_typ
 		
 		new_archetype->data.column_count = columns_count;
 		new_archetype->data.entity_count = 0;
-		new_archetype->data.entity_capacity = ARCHETYPE_PREALLOCATED_SIZE;
+		new_archetype->data.entity_capacity = ARCHETYPE::PREALLOCATED_SIZE;
 	} else {
 		// this is root archetype, no entities are saved here
 		new_archetype->data.entities = nullptr;

@@ -1,7 +1,7 @@
 ﻿#include "ecs/entity.hpp"
 #include "ecs/entity_index.hpp"
-#include "ecs/world.hpp"
 #include "ecs/archetype.hpp"
+#include "ecs/world.hpp"
 
 bool ENTITY::has_id(const World* world, const EntityId entity, const Id id) {
 	const EntityRecord* record = world->entity_index.entity_record_get_alive(entity);

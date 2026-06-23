@@ -6,7 +6,7 @@
 void World::init() {
 	this->root_archetype = Archetype::create_archetype(this, {});
 	
-	for (int i = 0; i < ECS::REST; i++) {
+	for (Id i = 0; i < ECS::REST; i++) {
 		this->new_entity();
 	}
 	ENTITY::add_id(this, ECS::NAME, ECS::COMPONENT);
@@ -27,7 +27,7 @@ void World::destroy() {
 
 ComponentId World::new_component_id() {
 	const ComponentId component_id = ++this->next_component_id;
-	if (component_id > WORLD::MAX_COMPONENT_ID) {
+	if (component_id > ECS::MAX_COMPONENT_ID) {
 		LOG_FATAL("Max components reached")
 		std::abort();
 	}
@@ -37,7 +37,7 @@ ComponentId World::new_component_id() {
 
 EntityId World::tag() {
 	const EntityId tag_id = ++this->next_component_id;
-	if (tag_id > WORLD::MAX_COMPONENT_ID) {
+	if (tag_id > ECS::MAX_COMPONENT_ID) {
 		LOG_FATAL("Max components reached")
 		std::abort();
 	}

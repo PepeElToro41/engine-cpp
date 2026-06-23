@@ -35,6 +35,7 @@ struct ComponentRecord {
 	Id id;
     
     Bitset flags;
+	HashMap<ArchetypeId, usz> columns_index;
 	
 	// only allocated in pairs
 	PairRecord* pair_record;

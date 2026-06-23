@@ -44,7 +44,7 @@ EntityId EntityIndex::new_entity(EntityRecord** out_record) {
 
     	PLATFORM::memzero(page->records + page_offset, sizeof(EntityRecord));
         page->records[page_offset].dense = dense;
-		out_record[0] = &page->records[page_offset];
+		*out_record = &page->records[page_offset];
         return entity;
     }
 
@@ -59,7 +59,7 @@ EntityId EntityIndex::new_entity(EntityRecord** out_record) {
 	
 	PLATFORM::memzero(page->records + page_offset, sizeof(EntityRecord));
     page->records[page_offset].dense = dense;
-	out_record[0] = &page->records[page_offset];
+	*out_record = &page->records[page_offset];
     return next_id;
 }
 

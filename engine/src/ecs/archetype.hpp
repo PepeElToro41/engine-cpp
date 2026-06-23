@@ -2,12 +2,23 @@
 
 #include "defines.hpp"
 #include "platform/platform.hpp"
+#include "ecs/ecs.hpp"
 #include "ecs/ecs_types.hpp"
 #include "templates/hashmap.hpp"
+#include "templates/dynamic_array.hpp"
 #include "core/memory/memory.hpp"
+#include "ecs/utils/bloom_filter.hpp"
 
 struct World;
 struct EntityRecord;
+
+
+namespace ARCHETYPE {
+	constexpr usz BITSET_MATCH_SIZE = 512;
+	constexpr usz PREALLOCATED_SIZE = 16;
+}
+
+using ArchetypeBitset = std::bitset<ARCHETYPE::BITSET_MATCH_SIZE>;
 
 struct ArchetypeType {
     // this array of ids must be sorted
@@ -31,7 +42,7 @@ struct ArchetypeType {
 	inline u64 hash() const {
 		u64 hashed_number = 2166136261u;
 
-		for (int i = 0; i < this->id_count; i++) {
+		for (usz i = 0; i < this->id_count; i++) {
 			hashed_number ^= this->ids[i];
 			hashed_number *= 16777619u;
 		}
@@ -42,17 +53,24 @@ struct ArchetypeType {
 			return false;
 		}
 
-		for (int i = 0; i < this->id_count; i++) {
+		for (usz i = 0; i < this->id_count; i++) {
 			if (this->ids[i] != other.ids[i]) {
 				return false;
 			}
 		}
 
 		return true;
-	};
+	}
     inline bool operator==(const ArchetypeType& other) const {
         return this->equals(other);
     }
+};
+
+template<>
+struct std::hash<ArchetypeType> {
+	usz operator()(const ArchetypeType& type) const noexcept {
+		return type.hash();
+	}
 };
 
 struct ArchetypeColumn {
@@ -81,6 +99,22 @@ struct ArchetypeData {
     usz entity_capacity;
 };
 
+struct ArchetypeMatcher {
+	ArchetypeBitset with_id_bitmask;
+	ArchetypeBitset without_id_bitmask;
+	
+	BloomFilter with_bloom;
+	DynamicArray<Id> with_ids;
+	DynamicArray<Id> without_ids;
+	
+	u8 with_outer_bitmask;
+	u8 without_outer_bitmask;
+};
+
+struct ArchetypeObserver {
+	ArchetypeMatcher matcher;
+};
+
 struct Archetype {
     World* world;
     BaseAllocator* allocator;
@@ -92,6 +126,10 @@ struct Archetype {
 
     bool alive;
     ArchetypeData data;
+	
+	BloomFilter bloom_filter;
+	ArchetypeBitset id_bitmask;
+	u8 outer_bitmask;
 
     HashMap<Id, Archetype*> forward_edges;
     HashMap<Id, Archetype*> backwards_edges;
@@ -119,6 +157,54 @@ struct Archetype {
     Archetype* traverse_add(World* world, Id id);
     Archetype* traverse_swap(World* world, Id old_id, Id new_id, usz column);
     Archetype* traverse_remove(World* world, Id id);
+	
+	inline bool match(const ArchetypeMatcher& matcher) const {
+		const u16 outer_bitmask = this->outer_bitmask;
+		const ArchetypeBitset id_bitmask = this->id_bitmask;
+		const BloomFilter bloom_filter = this->bloom_filter;
+
+		if (!bloom_filter.test(matcher.with_bloom)) {
+			return false;
+		}
+
+		if (matcher.with_outer_bitmask != 0) {
+			if ((matcher.with_outer_bitmask & outer_bitmask) != outer_bitmask) {
+				return false;
+			}
+			/* TODO: Potential optimization, bitmask could contain a pair of u64 bitset and index,
+			   that way it doesnt need to check 8 bitmasks
+			*/
+			if ((matcher.with_id_bitmask & id_bitmask) != matcher.with_id_bitmask) {
+				return false;
+			}
+		}
+		if (matcher.without_outer_bitmask != 0) {
+			if ((matcher.without_outer_bitmask & outer_bitmask) != 0) {
+				return false;
+			}
+			/* TODO: Potential optimization, bitmask could contain a pair of u64 bitset and index,
+			   that way it doesnt need to check 8 bitmasks
+			*/
+			if ((matcher.without_id_bitmask & id_bitmask).any()) {
+				return false;
+			}
+		}
+
+		for (usz i = 0; i < matcher.with_ids.size; i++) {
+			const Id id = matcher.with_ids.get(i);
+			if (!this->columns_map.contains(id)) {
+				return false;
+			}
+		}
+		for (usz i = 0; i < matcher.without_ids.size; i++) {
+			const Id id = matcher.without_ids.get(i);
+			if (columns_map.contains(id)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
 	
 	void destroy();
 
