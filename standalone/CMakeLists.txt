@@ -15,8 +15,10 @@ target_link_libraries(standalone PRIVATE
     engine
 )
 
-target_compile_features(engine PRIVATE cxx_std_23)
-set_target_properties(engine PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON)
+target_compile_features(standalone PRIVATE cxx_std_23)
+set_target_properties(standalone PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON)
+
+engine_copy_shaders(standalone)
 
 add_custom_command(TARGET standalone POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

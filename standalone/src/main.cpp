@@ -7,6 +7,8 @@
 int main() {
     DISPLAY_WINDOW::sdl_initialize();
     
+	
+	
     Application application{"Engine C++"};
     application.initialize();
     application.run();
