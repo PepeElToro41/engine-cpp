@@ -18,5 +18,5 @@ struct ENGINE_API RendererBackend {
     virtual BEGIN_FRAME_RESULT begin_frame() = 0;
     virtual void render_frame() = 0;
     virtual void end_frame() = 0;
-    virtual ~RendererBackend() = 0;
+	virtual ~RendererBackend() = default;
 };

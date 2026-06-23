@@ -471,7 +471,7 @@ static void destroy_vulkan_swapchain(VulkanBackend* backend) {
 }
 
 static VkShaderModule create_shader_module(const VulkanBackend* backend, const std::string& filename, const ShaderKind kind) {
-    const std::string shader_path = "engine/shaders/" + filename;
+    const std::string shader_path = "./shaders/" + filename;
 	const std::string source = read_text_file(shader_path);
     const char* filename_c = filename.c_str();
     const char* shader_path_c = shader_path.c_str();

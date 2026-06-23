@@ -32,22 +32,23 @@ struct Slice {
     }
 };
 
-struct StringSlice {
+struct StringView {
     const char* string = nullptr;
     usz len = 0;
 
-    explicit StringSlice(const char* string) {
+    explicit StringView(const char* string) {
         const usz len = strlen(string);
         this->string = string;
         this->len = len;
     }
     
-    explicit StringSlice(const char* string, const usz len) {
+    explicit StringView(const char* string, const usz len) {
         this->string = string;
         this->len = len;
     }
 
     const char* operator[](const usz index) const {
+    	if (index > this->len) return nullptr;
         return &this->string[index];
     }
 };

@@ -61,6 +61,28 @@ struct ENGINE_API DynamicArray {
         this->entries[index] = value;
         ++this->size;
     }
+	
+	std::optional<usz> find(T needle) {
+	    for (usz i = 0; i < this->size; ++i) {
+		    if (this->entries[i] == needle) {
+			    return i;
+		    }
+	    }
+    	return {};
+    }
+	
+	bool contains(T needle) {
+    	for (usz i = 0; i < this->size; ++i) {
+    		if (this->entries[i] == needle) {
+    			return true;
+    		}
+    	}
+    	return false;
+    }
+	
+	bool empty() const {
+	    return this->size == 0;
+    }
 
     void remove(usz index) {
         PLATFORM::memcpy(&this->entries[index], &this->entries[index + 1], (this->size - index - 1) * sizeof(T));
@@ -74,12 +96,18 @@ struct ENGINE_API DynamicArray {
     inline T get(usz index) const {
         return this->entries[index];
     }
+	inline T first() const {
+    	return this->entries[0];
+    }
     inline T last() const {
         return this->entries[this->size - 1];
     }
 
     inline T* get_ref(usz index) const {
         return &this->entries[index];
+    }
+	inline T* first_ref() const {
+    	return this->entries;
     }
     inline T* last_ref() const {
         return &this->entries[this->size - 1];
@@ -89,16 +117,13 @@ struct ENGINE_API DynamicArray {
         this->size = 0;
     }
 
-    void push(T value) {
+    void push(const T value) {
         this->reserve(1);
         this->entries[this->size++] = value;
     }
 
     inline T pop() {
         return this->entries[--this->size];
-    }
-    inline T* pop_ref() {
-        return &this->entries[--this->size];
     }
 
     DynamicArray<T> clone(BaseAllocator* allocator) {
