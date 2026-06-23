@@ -29,4 +29,4 @@ void* ArenaAllocator::reallocate(void* ptr, const usz size, const usz alignment)
     return this->allocate(size, alignment, true);
 }
 
-void ArenaAllocator::free(void* ptr) override {}
+void ArenaAllocator::free(void* ptr) {}

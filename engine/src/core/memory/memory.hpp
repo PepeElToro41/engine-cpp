@@ -8,9 +8,9 @@
 enum MemoryTag {
     UNKNOWN,
     RENDERING,
-    ECS,
-    ECS_DATA,
-    TEXTURE,
+    ECS_WORLD,
+    ECS_ARCHETYPES,
+    IMAGE_TEXTURE,
     
     MAX_TAG,
 };
